@@ -1,0 +1,55 @@
+# Python-related
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.db
+*.sqlite3
+
+# PyCharm related
+.idea/
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# Django migrations
+*/migrations/*
+
+# Static and media files
+/static/
+/media/
+
+# Logs
+*.log
+
+# Database files
+*.sqlite3
+
+# Django settings
+local_settings.py
+
+# Python bytecode files
+*.py[cod]
+
+# MacOS-specific
+.DS_Store
+
+# Test or coverage reports
+.coverage
+nosetests.xml
+coverage.xml
+*.cover
+*.hypothesis/
+
+# Pytest
+*.pytest_cache/
+
+# Django secret key
+secret_key.txt
+
+# Environment configuration
+.env
+.env.*
