@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from app.serializers.user_serializer import UserSerializer
+from app.models import AppUser
+from app.serializers.user_serializer import UserSerializer, AppUserSerializer
 from app.services.user_service import UserService
 
 class UserViewSet(viewsets.ViewSet):
@@ -12,47 +13,55 @@ class UserViewSet(viewsets.ViewSet):
     """
 
     def list(self, request):
-        """Search users with a query"""
-        query = request.query_params.get('query', '')
-        users = UserService.search_users(query)
-        serializer = UserSerializer(users, many=True)
+        """Get all users"""
+        users = AppUser.objects.filter(is_active=True)
+        serializer = AppUserSerializer(users, many=True)
         return Response(serializer.data)
 
     def create(self, request):
-        """Create a new user"""
-        user_data = request.data
-        try:
-            user = UserService.create_user(user_data)
-            serializer = UserSerializer(user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        """Create a new user (AppUser + User)"""
+        serializer = AppUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(AppUserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk=None):
-        """Update an existing user"""
-        updated_data = request.data
+        """Update user and nested user fields"""
         try:
-            user = UserService.update_user(pk, updated_data)
-            serializer = UserSerializer(user)
-            return Response(serializer.data)
-        except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            user = AppUser.objects.get(id=pk, is_active=True)
+            serializer = AppUserSerializer(user, data=request.data, partial=False)
+            if serializer.is_valid():
+                updated_user = serializer.save()
+                return Response(AppUserSerializer(updated_user).data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except AppUser.DoesNotExist:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def retrieve(self, request, pk=None):
-        """Retrieve a user by ID"""
+        """Retrieve a single user"""
         try:
-            user = User.objects.get(id=pk)
-            serializer = UserSerializer(user)
+            user = AppUser.objects.get(id=pk, is_active=True)
+            serializer = AppUserSerializer(user)
             return Response(serializer.data)
-        except User.DoesNotExist:
+        except AppUser.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def destroy(self, request, pk=None):
-        """Delete a user"""
+        """Soft delete the user"""
         try:
-            user = User.objects.get(id=pk)
+            user = AppUser.objects.get(id=pk, is_active=True)
             user.is_active = False
             user.save()
             return Response({"detail": "User deleted"}, status=status.HTTP_204_NO_CONTENT)
-        except User.DoesNotExist:
+        except AppUser.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def me(self, request):
+        """Return current authenticated user"""
+        try:
+            user = AppUser.objects.get(user=request.user)
+            serializer = AppUserSerializer(user)
+            return Response(serializer.data)
+        except AppUser.DoesNotExist:
+            return Response({"detail": "Authenticated user not found"}, status=status.HTTP_404_NOT_FOUND)
