@@ -39,14 +39,14 @@ class UserRepository:
             user=user,
             first_name=user_data.get('first_name', ''),
             last_name=user_data.get('last_name', ''),
-            description=user_data.get('description', '')
+            role=user_data.get('role', 'user'),
         )
         return app_user
 
     @staticmethod
     def update(user, user_data):
         """Update existing user"""
-        for field in ['first_name', 'last_name', 'description']:
+        for field in ['first_name', 'last_name']:
             if field in user_data:
                 setattr(user, field, user_data[field])
 
