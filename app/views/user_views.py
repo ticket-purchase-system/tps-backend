@@ -55,11 +55,12 @@ class UserViewSet(viewsets.ViewSet):
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def destroy(self, request, pk=None):
-        """Soft delete the user"""
+        """Hard delete the user and related auth user"""
         try:
-            user = AppUser.objects.get(id=pk, is_active=True)
-            user.is_active = False
-            user.save()
-            return Response({"detail": "User deleted"}, status=status.HTTP_204_NO_CONTENT)
+            app_user = AppUser.objects.get(id=pk)
+            user = app_user.user  # related auth User
+            app_user.delete()  # delete AppUser
+            user.delete()  # delete Django's User as well (optional but typical)
+            return Response({"detail": "User permanently deleted"}, status=status.HTTP_204_NO_CONTENT)
         except AppUser.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
