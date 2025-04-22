@@ -9,7 +9,9 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'password']
         extra_kwargs = {
-            'password': {'write_only': True},
+            'password': {'write_only': True, 'required': False},
+            'username': {'required': False},  # 👈 add this
+            'email': {'required': False}
         }
 
 class AppUserSerializer(serializers.ModelSerializer):
@@ -32,7 +34,7 @@ class AppUserSerializer(serializers.ModelSerializer):
             user = instance.user
             user.username = user_data.get('username', user.username)
             user.email = user_data.get('email', user.email)
-            if 'password' in user_data:
+            if 'password' in user_data and user_data['password']:
                 user.set_password(user_data['password'])
             user.save()
 
@@ -41,3 +43,5 @@ class AppUserSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+

@@ -6,11 +6,13 @@ from django.contrib.auth.models import User
 from app.models import AppUser
 from app.serializers.user_serializer import UserSerializer, AppUserSerializer
 from app.services.user_service import UserService
+from rest_framework.permissions import AllowAny
 
 class UserViewSet(viewsets.ViewSet):
     """
     A viewset for managing users with business logic encapsulated in UserService.
     """
+    permission_classes = [AllowAny]
 
     def list(self, request):
         """Get all users"""
@@ -34,6 +36,7 @@ class UserViewSet(viewsets.ViewSet):
             if serializer.is_valid():
                 updated_user = serializer.save()
                 return Response(AppUserSerializer(updated_user).data)
+            print("Serializer validation errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except AppUser.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -41,7 +44,11 @@ class UserViewSet(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         """Retrieve a single user"""
         try:
-            user = AppUser.objects.get(id=pk, is_active=True)
+            if str(pk).isdigit():
+                user = AppUser.objects.get(id=pk, is_active=True)
+            else:
+                user = AppUser.objects.get(user__username=pk, is_active=True)
+
             serializer = AppUserSerializer(user)
             return Response(serializer.data)
         except AppUser.DoesNotExist:
@@ -56,12 +63,3 @@ class UserViewSet(viewsets.ViewSet):
             return Response({"detail": "User deleted"}, status=status.HTTP_204_NO_CONTENT)
         except AppUser.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    def me(self, request):
-        """Return current authenticated user"""
-        try:
-            user = AppUser.objects.get(user=request.user)
-            serializer = AppUserSerializer(user)
-            return Response(serializer.data)
-        except AppUser.DoesNotExist:
-            return Response({"detail": "Authenticated user not found"}, status=status.HTTP_404_NOT_FOUND)

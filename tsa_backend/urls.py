@@ -21,8 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/users', UserViewSet.as_view({'get': 'list', 'post': 'create'})),
-    path('api/users/<int:pk>', UserViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
-    path('api/users/me', UserViewSet.as_view({'get': 'me'})),
+    path('api/users/<pk>', UserViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
 
     # login - get access and refresh tokens
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
