@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from app.views.user_event_favorite import UserEventFavoriteViewSet
 from app.views.user_views import UserViewSet
 from app.views.event_views import EventViewSet
+from app.views.technical_issue_views import TechnicalIssueViewSet
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -15,6 +16,7 @@ router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='users')
 router.register(r'events', EventViewSet, basename='events')
 router.register(r'events/favorites', UserEventFavoriteViewSet, basename='events/favorites')
+router.register(r'technical-issues', TechnicalIssueViewSet, basename='technical-issues')
 
 
 urlpatterns = [
@@ -22,6 +24,8 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/users', UserViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('api/users/<pk>', UserViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
+    path('api/technical-issues', TechnicalIssueViewSet.as_view({'get': 'list', 'post': 'create'})),
+    path('api/technical-issues/<pk>', TechnicalIssueViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
 
     # login - get access and refresh tokens
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
