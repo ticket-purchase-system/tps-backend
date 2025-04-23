@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+
+from app.views.artist_views import ArtistViewSet
 from app.views.user_event_favorite import UserEventFavoriteViewSet
 from app.views.user_views import UserViewSet
 from app.views.event_views import EventViewSet
@@ -19,6 +21,7 @@ router.register(r'events', EventViewSet, basename='events')
 router.register(r'events/favorites', UserEventFavoriteViewSet, basename='events/favorites')
 router.register(r'technical-issues', TechnicalIssueViewSet, basename='technical-issues')
 router.register(r'loyalty-program', LoyaltyProgramViewSet, basename='loyalty-program')
+router.register(r'artists', ArtistViewSet, basename='artists')
 
 
 urlpatterns = [

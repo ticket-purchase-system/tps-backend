@@ -1,45 +1,82 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from urllib3 import request
+
 from app.serializers.event_serializer import EventSerializer
-from app.services.event_service import create_event, update_event, get_event, get_events
-from django.contrib.auth.models import User
+from app.services.event_service import EventService
 from app.models.event import Event
+from app.models.artist import Artist
+from app.models.user import AppUser
+
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
+    event_service = EventService()
 
     @action(detail=False, methods=['post'])
     def create_event(self, request):
-        """
-        Custom endpoint to create an event.
-        """
+        """Custom endpoint to create an event."""
         title = request.data.get('title')
+        type = request.data.get('type', 'CONCERT')  # Default type
         date = request.data.get('date')
         price = request.data.get('price')
         description = request.data.get('description')
         user_id = request.data.get('created_by')
 
+        # New fields
+        start_hour = request.data.get('start_hour')
+        end_hour = request.data.get('end_hour')
+        place = request.data.get('place')
+        seats_no = request.data.get('seats_no')
+        artist_ids = request.data.get('artists', [])
+
+        artists = []
+        if artist_ids:
+            artists = Artist.objects.filter(id__in=artist_ids)
+
+        print(request.data)
         try:
-            created_by = User.objects.get(id=user_id)
-            event = create_event(title, date, price, description, created_by)
+            created_by = AppUser.objects.get(id=user_id)
+            event = self.event_service.create_event(
+                title, type, date, price, description, created_by.user,
+                start_hour, end_hour, place, seats_no, artists
+            )
             serializer = self.get_serializer(event)
             return Response(serializer.data, status=201)
-        except User.DoesNotExist:
+        except AppUser.DoesNotExist:
+            print("User not found!")
             return Response({'error': 'User not found'}, status=400)
+
+        except Exception as e:
+            print("Unexpected error:", e)
+            return Response({'error': str(e)}, status=400)
 
     @action(detail=True, methods=['put'])
     def update_event(self, request, pk=None):
-        """
-        Custom endpoint to update an event.
-        """
+        """Custom endpoint to update an event."""
         title = request.data.get('title')
+        type = request.data.get('type')
         date = request.data.get('date')
         price = request.data.get('price')
         description = request.data.get('description')
 
-        event = update_event(pk, title, date, price, description)
+        # New fields
+        start_hour = request.data.get('start_hour')
+        end_hour = request.data.get('end_hour')
+        place = request.data.get('place')
+        seats_no = request.data.get('seats_no')
+        artist_ids = request.data.get('artists')
+
+        artists = None
+        if artist_ids:
+            artists = Artist.objects.filter(id__in=artist_ids)
+
+        event = self.event_service.update_event(
+            pk, title, type, date, price, description,
+            start_hour, end_hour, place, seats_no, artists
+        )
 
         if event:
             serializer = self.get_serializer(event)
@@ -53,7 +90,7 @@ class EventViewSet(viewsets.ModelViewSet):
         start_date = request.query_params.get('start_date', None)
         end_date = request.query_params.get('end_date', None)
 
-        event_data = get_events(query, start_date, end_date)
+        event_data = self.event_service.get_events(query, start_date, end_date)
 
         events = [
             {
@@ -73,7 +110,8 @@ class EventViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         """Retrieve a single event by ID with details"""
         pk = kwargs['pk']
-        event_data = get_event(pk)
+        event_data = self.event_service.get_event(pk)
+
         if event_data:
             event_serializer = EventSerializer(event_data['event'])
             event_details = event_data['details']
@@ -82,7 +120,7 @@ class EventViewSet(viewsets.ModelViewSet):
                 'event': event_serializer.data,
                 'details': {
                     'location': event_details.location if event_details else None,
-                    'ruleKs': event_details.rules if event_details else None,
+                    'rules': event_details.rules if event_details else None,
                     'max_attendees': event_details.max_attendees if event_details else None,
                     'additional_info': event_details.additional_info if event_details else None
                 }

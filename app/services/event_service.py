@@ -1,108 +1,65 @@
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
-from app.models.event import Event
 from django.utils import timezone
-from app.models.event_details import EventDetails
+from app.repositories.event_repository import EventRepository
 
-def create_event(title, date, price, description, created_by):
-    """
-    Create and save a new event.
-    :param title: The title of the event
-    :param date: The date of the event
-    :param price: The price for attending the event
-    :param description: A description of the event
-    :param created_by: The user who created the event
-    :return: The created Event object
-    """
-    event = Event(
-        title=title,
-        date=date,
-        price=price,
-        description=description,
-        created_by=created_by,
-        created_at=timezone.now()
-    )
-    event.save()
-    return event
+class EventService:
+    def __init__(self):
+        self.event_repository = EventRepository()
 
+    def create_event(self, title, type, date, price, description, created_by, start_hour=None,
+                     end_hour=None, place=None, seats_no=None, artists=None):
+        """Create a new event"""
+        event = self.event_repository.create(
+            title=title,
+            type=type,
+            date=date,
+            start_hour=start_hour,
+            end_hour=end_hour,
+            place=place,
+            price=price,
+            seats_no=seats_no,
+            description=description,
+            created_by=created_by,
+            created_at=timezone.now()
+        )
 
-def update_event(event_id, title=None, date=None, price=None, description=None):
-    """
-    Update an existing event.
-    :param event_id: The ID of the event to update
-    :param title: The new title of the event (optional)
-    :param date: The new date of the event (optional)
-    :param price: The new price of the event (optional)
-    :param description: The new description of the event (optional)
-    :return: The updated Event object, or None if not found
-    """
-    try:
-        event = Event.objects.get(id=event_id)
+        if artists:
+            self.event_repository.add_artists_to_event(event, artists)
 
-        if title:
-            event.title = title
-        if date:
-            event.date = date
-        if price:
-            event.price = price
-        if description:
-            event.description = description
-
-        event.save()
         return event
-    except Event.DoesNotExist:
-        return None
 
-def get_event(event_id):
-    """
-    Retrieve an event and its details by event ID.
-    :param event_id: The ID of the event to retrieve
-    :return: A dictionary containing the Event and its details if found, None otherwise
-    """
-    try:
-        event = Event.objects.get(id=event_id)
-        event_details = EventDetails.objects.get(event=event)
-        return {
-            'event': event,
-            'details': event_details
+    def update_event(self, event_id, title=None, type=None, date=None, price=None,
+                     description=None, start_hour=None, end_hour=None, place=None,
+                     seats_no=None, artists=None):
+        """Update an existing event"""
+        event = self.event_repository.get_by_id(event_id)
+        if not event:
+            return None
+
+        update_data = {
+            'title': title,
+            'type': type,
+            'date': date,
+            'price': price,
+            'description': description,
+            'start_hour': start_hour,
+            'end_hour': end_hour,
+            'place': place,
+            'seats_no': seats_no
         }
-    except ObjectDoesNotExist:
-        return None
 
+        update_data = {k: v for k, v in update_data.items() if v is not None}
 
-def get_events(query=None, start_date=None, end_date=None):
-    """
-    Retrieve a list of events, with optional filtering, along with event details.
-    :param query: A search query to filter events by title or description
-    :param start_date: A start date filter for the event date
-    :param end_date: An end date filter for the event date
-    :return: A list of dictionaries containing Event and EventDetails
-    """
-    filters = Q()
+        updated_event = self.event_repository.update(event, **update_data)
 
-    if query:
-        filters &= (Q(title__icontains=query) | Q(description__icontains=query))
+        if artists:
+            self.event_repository.add_artists_to_event(updated_event, artists)
 
-    if start_date:
-        filters &= Q(date__gte=start_date)
+        return updated_event
 
-    if end_date:
-        filters &= Q(date__lte=end_date)
+    def get_event(self, event_id):
+        """Get an event by ID with its details"""
+        return self.event_repository.get_event_with_details(event_id)
 
-    events = Event.objects.filter(filters).order_by('date')
-
-    event_data = []
-    for event in events:
-        try:
-            event_details = EventDetails.objects.get(event=event)
-            event_data.append({
-                'event': event,
-                'details': event_details
-            })
-        except EventDetails.DoesNotExist:
-            event_data.append({
-                'event': event,
-                'details': None
-            })
-
-    return event_data
+    def get_events(self, query=None, start_date=None, end_date=None):
+        """Get filtered events with their details"""
+        return self.event_repository.get_events_with_details(query, start_date, end_date)
