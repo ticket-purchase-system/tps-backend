@@ -3,6 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from app.views.artist_views import ArtistViewSet
+from app.views.orders_views import OrderViewSet, ProductViewSet, TicketsViewSet, ReviewViewSet
 from app.views.user_event_favorite import UserEventFavoriteViewSet
 from app.views.user_views import UserViewSet
 from app.views.event_views import EventViewSet
@@ -13,6 +14,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenBlacklistView,
 )
+from app.views.mail_views import send_ticket_email
 
 router = DefaultRouter()
 
@@ -22,7 +24,10 @@ router.register(r'events/favorites', UserEventFavoriteViewSet, basename='events/
 router.register(r'technical-issues', TechnicalIssueViewSet, basename='technical-issues')
 router.register(r'loyalty-program', LoyaltyProgramViewSet, basename='loyalty-program')
 router.register(r'artists', ArtistViewSet, basename='artists')
-
+router.register(r'orders', OrderViewSet, basename='orders')
+router.register(r'products', ProductViewSet, basename='products')
+router.register(r'tickets', TicketsViewSet, basename='tickets')
+router.register(r'reviews', ReviewViewSet, basename='reviews')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -42,4 +47,11 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # logout - when refresh token expires
     path('api/token/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+
+    path('api/orders', OrderViewSet.as_view({'get': 'list', 'post': 'create'})),
+    path('api/orders/<pk>', OrderViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
+    path('api/orders/user/<user_id>', OrderViewSet.as_view({'get': 'user_orders'})),
+
+    path('api/orders/<int:pk>/send-email/', send_ticket_email),
+
 ]
