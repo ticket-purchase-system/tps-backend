@@ -8,6 +8,7 @@ from app.views.user_views import UserViewSet
 from app.views.event_views import EventViewSet
 from app.views.technical_issue_views import TechnicalIssueViewSet
 from app.views.loyalty_program_views import LoyaltyProgramViewSet
+from app.views.ticket_view import BasketView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -35,6 +36,8 @@ urlpatterns = [
     path('api/loyalty-program/<pk>', LoyaltyProgramViewSet.as_view({'get': 'retrieve', 'put': 'update'})),
     path('api/loyalty-program/check', LoyaltyProgramViewSet.as_view({'get': 'check_membership'})),
     path('api/loyalty-program/<pk>/deactivate', LoyaltyProgramViewSet.as_view({'post': 'deactivate'})),
+    path('api/basket', BasketView.as_view()),
+    path('api/basket/add', BasketView.as_view()),
 
     # login - get access and refresh tokens
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
