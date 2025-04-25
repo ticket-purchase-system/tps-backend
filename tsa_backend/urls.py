@@ -1,8 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-
 from app.views.artist_views import ArtistViewSet
+from app.views.event_attachment_views import EventAttachmentViewSet
+from app.views.event_details_views import EventDetailsViewSet
 from app.views.user_event_favorite import UserEventFavoriteViewSet
 from app.views.user_views import UserViewSet
 from app.views.event_views import EventViewSet
@@ -24,7 +25,6 @@ router.register(r'technical-issues', TechnicalIssueViewSet, basename='technical-
 router.register(r'loyalty-program', LoyaltyProgramViewSet, basename='loyalty-program')
 router.register(r'artists', ArtistViewSet, basename='artists')
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
@@ -36,6 +36,12 @@ urlpatterns = [
     path('api/loyalty-program/<pk>', LoyaltyProgramViewSet.as_view({'get': 'retrieve', 'put': 'update'})),
     path('api/loyalty-program/check', LoyaltyProgramViewSet.as_view({'get': 'check_membership'})),
     path('api/loyalty-program/<pk>/deactivate', LoyaltyProgramViewSet.as_view({'post': 'deactivate'})),
+    path('api/events/<int:pk>/details/', EventDetailsViewSet.as_view({'get': 'by_event'}),
+         name='event-details-by-event'),
+    path('api/event-details/<int:pk>/download-rules/', EventDetailsViewSet.as_view({'get': 'download_rules'}),
+         name='download-rules'),
+    path('api/attachments/<int:pk>/download/', EventAttachmentViewSet.as_view({'get': 'download'}),
+         name='download-attachment'),
     path('api/basket', BasketView.as_view()),
     path('api/basket/add', BasketView.as_view()),
 
