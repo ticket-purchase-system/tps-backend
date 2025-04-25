@@ -38,10 +38,12 @@ urlpatterns = [
     path('api/users/<pk>', UserViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
     path('api/technical-issues', TechnicalIssueViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('api/technical-issues/<pk>', TechnicalIssueViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
+    # Loyalty program endpoints - Make sure "check" endpoint is registered before the detail view
+    path('api/loyalty-program/check', LoyaltyProgramViewSet.as_view({'get': 'check_membership'})),
     path('api/loyalty-program', LoyaltyProgramViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('api/loyalty-program/<pk>', LoyaltyProgramViewSet.as_view({'get': 'retrieve', 'put': 'update'})),
-    path('api/loyalty-program/check', LoyaltyProgramViewSet.as_view({'get': 'check_membership'})),
     path('api/loyalty-program/<pk>/deactivate', LoyaltyProgramViewSet.as_view({'post': 'deactivate'})),
+
     path('api/events/<int:pk>/details/', EventDetailsViewSet.as_view({'get': 'by_event'}),
          name='event-details-by-event'),
     path('api/event-details/<int:pk>/download-rules/', EventDetailsViewSet.as_view({'get': 'download_rules'}),
