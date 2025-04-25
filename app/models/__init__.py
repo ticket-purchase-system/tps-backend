@@ -5,3 +5,4 @@ from app.models.loyalty_program import LoyaltyProgram
 from app.models.artist import Artist
 from app.models.event_details import EventDetails
 from app.models.event_attachment import EventAttachment
+from app.models.ticket import Ticket

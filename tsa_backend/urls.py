@@ -9,6 +9,7 @@ from app.views.user_views import UserViewSet
 from app.views.event_views import EventViewSet
 from app.views.technical_issue_views import TechnicalIssueViewSet
 from app.views.loyalty_program_views import LoyaltyProgramViewSet
+from app.views.ticket_view import BasketView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -41,6 +42,8 @@ urlpatterns = [
          name='download-rules'),
     path('api/attachments/<int:pk>/download/', EventAttachmentViewSet.as_view({'get': 'download'}),
          name='download-attachment'),
+    path('api/basket', BasketView.as_view()),
+    path('api/basket/add', BasketView.as_view()),
 
     # login - get access and refresh tokens
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
