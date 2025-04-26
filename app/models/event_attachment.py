@@ -2,7 +2,7 @@ from django.db import models
 from app.models.event_details import EventDetails
 
 def event_attachment_path(instance, filename):
-    return f'event_attachments/{instance.event.id}/{filename}'
+    return f'event_attachments/{instance.event_details.event.id}/{filename}'
 
 class EventAttachment(models.Model):
     event_details = models.ForeignKey(EventDetails, related_name="attachments", on_delete=models.CASCADE)

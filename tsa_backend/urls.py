@@ -32,6 +32,7 @@ router.register(r'orders', OrderViewSet, basename='orders')
 router.register(r'products', ProductViewSet, basename='products')
 router.register(r'tickets', TicketsViewSet, basename='tickets')
 router.register(r'reviews', ReviewViewSet, basename='reviews')
+router.register(r'attachments', EventAttachmentViewSet, basename='attachments')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -55,7 +56,7 @@ urlpatterns = [
         'put': 'update',
         'patch': 'partial_update'
     }), name='event-details'),
-    path('api/attachments/<int:pk>/download/', EventAttachmentViewSet.as_view({'get': 'download'}),
+    path('api/attachments/<int:pk>/download', EventAttachmentViewSet.as_view({'get': 'download'}),
          name='download-attachment'),
     path('api/basket', BasketView.as_view()),
     path('api/basket/add', BasketView.as_view()),
