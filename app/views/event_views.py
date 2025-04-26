@@ -94,13 +94,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
         events = [
             {
-                'event': EventSerializer(event['event']).data,
-                'details': {
-                    'location': event['details'].location if event['details'] else None,
-                    'rules': event['details'].rules if event['details'] else None,
-                    'max_attendees': event['details'].max_attendees if event['details'] else None,
-                    'additional_info': event['details'].additional_info if event['details'] else None
-                }
+                'event': EventSerializer(event['event']).data
             }
             for event in event_data
         ]

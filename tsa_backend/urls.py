@@ -17,6 +17,8 @@ from rest_framework_simplejwt.views import (
     TokenBlacklistView,
 )
 from app.views.mail_views import send_ticket_email
+from django.conf import settings
+from django.conf.urls.static import static
 
 router = DefaultRouter()
 
@@ -48,6 +50,11 @@ urlpatterns = [
          name='event-details-by-event'),
     path('api/event-details/<int:pk>/download-rules/', EventDetailsViewSet.as_view({'get': 'download_rules'}),
          name='download-rules'),
+    path('api/event-details/<int:pk>/', EventDetailsViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update'
+    }), name='event-details'),
     path('api/attachments/<int:pk>/download/', EventAttachmentViewSet.as_view({'get': 'download'}),
          name='download-attachment'),
     path('api/basket', BasketView.as_view()),
@@ -67,3 +74,5 @@ urlpatterns = [
     path('api/orders/<int:pk>/send-email/', send_ticket_email),
 
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

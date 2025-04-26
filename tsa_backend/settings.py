@@ -1,11 +1,13 @@
 from pathlib import Path
 from datetime import timedelta
+import os
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 SECRET_KEY = 'django-insecure-%+kfz362b(r-o^gq%8*$ywmosmbtk1n#)(4__l3hgaq6j=sxqc'
-
-DEBUG = True
 
 ALLOWED_HOSTS = [
     "http://localhost:4200",
@@ -14,6 +16,8 @@ ALLOWED_HOSTS = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -39,6 +43,9 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'tsa_backend.urls'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR
 
 TEMPLATES = [
     {
