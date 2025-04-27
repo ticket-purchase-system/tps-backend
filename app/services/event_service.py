@@ -44,7 +44,8 @@ class EventService:
             'start_hour': start_hour,
             'end_hour': end_hour,
             'place': place,
-            'seats_no': seats_no
+            'seats_no': seats_no,
+            'artists': artists
         }
 
         update_data = {k: v for k, v in update_data.items() if v is not None}
