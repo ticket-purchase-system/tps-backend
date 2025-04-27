@@ -11,6 +11,7 @@ from app.views.event_views import EventViewSet
 from app.views.technical_issue_views import TechnicalIssueViewSet
 from app.views.loyalty_program_views import LoyaltyProgramViewSet
 from app.views.ticket_view import BasketView
+from app.views.voucher_views import VoucherViewSet
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -33,6 +34,7 @@ router.register(r'products', ProductViewSet, basename='products')
 router.register(r'tickets', TicketsViewSet, basename='tickets')
 router.register(r'reviews', ReviewViewSet, basename='reviews')
 router.register(r'attachments', EventAttachmentViewSet, basename='attachments')
+router.register(r'vouchers', VoucherViewSet, basename='vouchers')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -60,6 +62,14 @@ urlpatterns = [
          name='download-attachment'),
     path('api/basket', BasketView.as_view()),
     path('api/basket/add', BasketView.as_view()),
+
+    # Voucher endpoints
+    path('api/vouchers/user', VoucherViewSet.as_view({'get': 'user'})),
+    path('api/vouchers/purchase', VoucherViewSet.as_view({'post': 'purchase'})),
+    path('api/vouchers/validate/<str:code>', VoucherViewSet.as_view({'get': 'validate'})),
+    path('api/vouchers/redeem', VoucherViewSet.as_view({'post': 'redeem'})),
+    path('api/vouchers/<int:pk>/send', VoucherViewSet.as_view({'post': 'send'})),
+    path('api/vouchers/apply', VoucherViewSet.as_view({'post': 'apply'})),
 
     # login - get access and refresh tokens
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

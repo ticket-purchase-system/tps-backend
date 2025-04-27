@@ -7,3 +7,4 @@ from app.models.event_details import EventDetails
 from app.models.event_attachment import EventAttachment
 from app.models.ticket import Ticket
 from app.models.orders import *
+from app.models.voucher import Voucher
