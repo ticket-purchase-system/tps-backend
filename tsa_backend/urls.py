@@ -83,6 +83,7 @@ urlpatterns = [
     path('api/orders/user/<user_id>', OrderViewSet.as_view({'get': 'user_orders'})),
 
     path('api/orders/<int:pk>/send-email/', send_ticket_email),
+    path('api/events/favorites/user/<int:user_id>/', UserEventFavoriteViewSet.as_view({'get': 'user_favorites'})),
 
 ]
 
