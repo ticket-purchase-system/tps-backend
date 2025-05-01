@@ -13,6 +13,7 @@ from app.serializers.orders_serializer import (
     ReviewSerializer
 )
 
+
 class OrderViewSet(viewsets.ViewSet):
     """
     Zarządzanie zamówieniami:
@@ -92,11 +93,85 @@ class OrderViewSet(viewsets.ViewSet):
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'])
+    def add_review(self, request, pk=None):
+        """POST /orders/{pk}/add_review/ — dodaj recenzję do zamówienia"""
+        try:
+            app_user = get_object_or_404(AppUser, user=request.user)
+            order = get_object_or_404(Order, pk=pk)
+
+            if order.user_id != app_user.user.id:
+                return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+            if order.review is not None:
+                return Response({"detail": "Order already has a review"}, status=status.HTTP_400_BAD_REQUEST)
+
+            review_data = request.data.copy()
+
+            review_serializer = ReviewSerializer(data=review_data)
+
+            if review_serializer.is_valid():
+                review = review_serializer.save()
+
+                order.review = review
+                order.save()
+
+                return Response(ReviewSerializer(review).data, status=status.HTTP_201_CREATED)
+            else:
+                print(review_serializer.errors)
+                return Response(review_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Error adding review: {str(e)}")
+            return Response({"detail": f"An error occurred: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['put'])
+    def update_review(self, request, pk=None):
+        """PUT /orders/{pk}/update_review/ — aktualizuj recenzję zamówienia"""
+        app_user = get_object_or_404(AppUser, user=request.user)
+        order = get_object_or_404(Order, pk=pk)
+
+        if order.user_id != app_user.id and app_user.role != 'admin':
+            return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        if order.review is None:
+            return Response({"detail": "Order has no review to update"}, status=status.HTTP_400_BAD_REQUEST)
+
+        review_data = request.data
+        review_serializer = ReviewSerializer(order.review, data=review_data, partial=True)
+
+        if review_serializer.is_valid():
+            review = review_serializer.save()
+            return Response(ReviewSerializer(review).data)
+
+        return Response(review_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'])
+    def delete_review(self, request, pk=None):
+        """DELETE /orders/{pk}/delete_review/ — usuń recenzję zamówienia"""
+        app_user = get_object_or_404(AppUser, user=request.user)
+        order = get_object_or_404(Order, pk=pk)
+
+        if order.user_id != app_user.id and app_user.role != 'admin':
+            return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        if order.review is None:
+            return Response({"detail": "Order has no review to delete"}, status=status.HTTP_400_BAD_REQUEST)
+
+        review = order.review
+        order.review = None
+        order.save()
+        review.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     """CRUD dla produktów"""
     permission_classes = [IsAuthenticated]
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
 
 class TicketsViewSet(viewsets.ModelViewSet):
     """CRUD dla biletów"""
@@ -104,8 +179,34 @@ class TicketsViewSet(viewsets.ModelViewSet):
     queryset = Tickets.objects.all()
     serializer_class = TicketsSerializer
 
+
 class ReviewViewSet(viewsets.ModelViewSet):
     """CRUD dla recenzji"""
     permission_classes = [IsAuthenticated]
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+
+    @action(detail=False, methods=['get'])
+    def product_reviews(self, request):
+        """GET /reviews/product_reviews/?product_id={id} — Get reviews for a specific product"""
+        product_id = request.query_params.get('product_id')
+        if not product_id:
+            return Response({"detail": "Product ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        product = get_object_or_404(Product, pk=product_id)
+        reviews = Review.objects.filter(order__product=product)
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def recent(self, request):
+        """GET /reviews/recent/?count={count} — Get recent reviews"""
+        count = request.query_params.get('count', 5)
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+
+        reviews = Review.objects.all().order_by('-created_at')[:count]
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response(serializer.data)

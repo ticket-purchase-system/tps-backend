@@ -31,7 +31,8 @@ class Review(models.Model):
     numberOfStars = models.CharField(
         max_length=1,
         choices=Opinion.choices,
-        default=Opinion.FIVE_STARS
+        default=Opinion.FIVE_STARS,
+        db_column='numberofstars'
     )
     comment = models.TextField()
     date = models.DateTimeField(default=timezone.now)

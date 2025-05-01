@@ -35,6 +35,7 @@ router.register(r'tickets', TicketsViewSet, basename='tickets')
 router.register(r'reviews', ReviewViewSet, basename='reviews')
 router.register(r'attachments', EventAttachmentViewSet, basename='attachments')
 router.register(r'vouchers', VoucherViewSet, basename='vouchers')
+router.register(r'reviews', ReviewViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -84,6 +85,9 @@ urlpatterns = [
 
     path('api/orders/<int:pk>/send-email/', send_ticket_email),
     path('api/events/favorites/user/<int:user_id>/', UserEventFavoriteViewSet.as_view({'get': 'user_favorites'})),
+    path('api/orders/<int:pk>/add_review/', OrderViewSet.as_view({'post': 'add_review'})),
+    path('api/orders/<int:pk>/update_review/', OrderViewSet.as_view({'put': 'update_review'})),
+    path('api/orders/<int:pk>/delete_review/', OrderViewSet.as_view({'delete': 'delete_review'})),
 
 ]
 
