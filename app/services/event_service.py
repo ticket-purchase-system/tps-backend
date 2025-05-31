@@ -1,4 +1,5 @@
 from django.utils import timezone
+from app.models import Event, Review
 from app.repositories.event_repository import EventRepository
 
 class EventService:
@@ -64,3 +65,32 @@ class EventService:
     def get_events(self, query=None, start_date=None, end_date=None):
         """Get filtered events with their details"""
         return self.event_repository.get_events_with_details(query, start_date, end_date)
+
+    def get_past_events_with_reviews(self, query='', limit=None):
+        """Get past events with all available reviews"""
+        from django.utils import timezone
+
+        current_date = timezone.now().date()
+
+        past_events = Event.objects.filter(date__lt=current_date)
+
+        if query:
+            past_events = past_events.filter(title__icontains=query)
+
+        past_events = past_events.order_by('-date')
+
+        if limit:
+            past_events = past_events[:int(limit)]
+
+        events_with_reviews = []
+        for event in past_events:
+            reviews = Review.objects.filter(
+                order__orderproduct__product__event=event
+            ).distinct()
+
+            events_with_reviews.append({
+                'event': event,
+                'reviews': list(reviews)
+            })
+
+        return events_with_reviews

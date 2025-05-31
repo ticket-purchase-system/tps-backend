@@ -8,3 +8,4 @@ from app.models.event_attachment import EventAttachment
 from app.models.ticket import Ticket
 from app.models.orders import *
 from app.models.voucher import Voucher
+from app.models.event_photo import EventPhoto
