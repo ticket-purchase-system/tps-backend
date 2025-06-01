@@ -8,12 +8,16 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from urllib3 import request
 from app.models import Review
+from django.db.models import Count
+from django.utils import timezone
+
 from app.serializers.event_serializer import EventSerializer
 from app.services.event_service import EventService
 from app.models.event import Event
 from app.models.artist import Artist
 from app.models.user import AppUser
 from django.utils import timezone
+from app.models.ticket import Ticket
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -429,3 +433,66 @@ class EventViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response({'error': f'Failed to delete photo: {str(e)}'}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def popular(self, request):
+        """Get most popular events based on ticket sales"""
+        limit = int(request.query_params.get('limit', 7))
+
+        # Get future events with ticket counts
+        popular_events = Event.objects.filter(
+            date__gte=timezone.now()
+        ).annotate(
+            ticket_count=Count('ticket')
+        ).order_by('-ticket_count', 'date')[:limit]
+
+        events = [
+            {
+                'event': EventSerializer(event).data
+            }
+            for event in popular_events
+        ]
+
+        return Response(events)
+
+    @action(detail=False, methods=['get'])
+    def personalized(self, request):
+        """Get personalized event recommendations based on filters"""
+        limit = int(request.query_params.get('limit', 10))
+        event_types = request.query_params.getlist('types')  # e.g., ?types=FESTIVAL&types=CONCERT
+        keywords = request.query_params.getlist('keywords')  # e.g., ?keywords=gaga&keywords=bieber
+
+        from django.db.models import Q
+
+        # Start with future events
+        filters = Q(date__gte=timezone.now())
+
+        # Filter by event types if provided
+        if event_types:
+            type_filter = Q()
+            for event_type in event_types:
+                type_filter |= Q(type__icontains=event_type)
+            filters &= type_filter
+
+        # Filter by keywords in title, description, or artist names
+        if keywords:
+            keyword_filter = Q()
+            for keyword in keywords:
+                keyword_filter |= (
+                    Q(title__icontains=keyword) |
+                    Q(description__icontains=keyword) |
+                    Q(artists__name__icontains=keyword)
+                )
+            filters &= keyword_filter
+
+        # Get events matching the filters
+        personalized_events = Event.objects.filter(filters).distinct().order_by('date')[:limit]
+
+        events = [
+            {
+                'event': EventSerializer(event).data
+            }
+            for event in personalized_events
+        ]
+
+        return Response(events)
