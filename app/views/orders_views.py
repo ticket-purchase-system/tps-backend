@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 import logging
+from app.models.orders import OrderProduct
+
 
 from app.models import AppUser
 from app.models.orders import Order, Product, Tickets, Review
@@ -88,6 +90,22 @@ class OrderViewSet(viewsets.ViewSet):
         orders = Order.objects.filter(user=target_app_user.user)
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='add-product')
+    def add_product(self, request, pk=None):
+        order = get_object_or_404(Order, pk=pk)
+        product_id = request.data.get('product_id')
+        quantity = request.data.get('quantity', 1)
+
+        product = get_object_or_404(Product, pk=product_id)
+        order_product = OrderProduct.objects.create(order=order, product=product, quantity=quantity)
+
+        return Response({
+            "message": "Product added to order",
+            "order_id": order.id,
+            "product_id": product.id,
+            "quantity": quantity
+        }, status=201)
 
     @action(detail=False, methods=['get'])
     def me(self, request):
