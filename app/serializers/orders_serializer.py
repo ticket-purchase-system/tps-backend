@@ -7,7 +7,7 @@ User = get_user_model()
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'price', 'description']
+        fields = ['id', 'price', 'description', 'event']
 
 # class TicketsSerializer(serializers.ModelSerializer):
 #     class Meta:
