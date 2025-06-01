@@ -111,7 +111,6 @@ class EventServiceTest(TestCase):
         self.assertIsNone(result)
 
 
-# ✨ Manual runner
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(EventServiceTest)
     runner = unittest.TextTestRunner(verbosity=2)
