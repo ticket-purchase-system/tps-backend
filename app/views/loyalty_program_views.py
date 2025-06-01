@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from app.models import LoyaltyProgram, AppUser
 from app.serializers.loyalty_program_serializer import LoyaltyProgramSerializer
+from decimal import Decimal
 
 class LoyaltyProgramViewSet(viewsets.ViewSet):
     """
@@ -31,11 +32,26 @@ class LoyaltyProgramViewSet(viewsets.ViewSet):
         try:
             app_user = AppUser.objects.get(user=request.user)
             
-            # Check if user is already in loyalty program
-            if LoyaltyProgram.objects.filter(user=app_user).exists():
+            # Check if user has an active loyalty program membership
+            active_membership = LoyaltyProgram.objects.filter(user=app_user, is_active=True).first()
+            if active_membership:
                 return Response(
                     {"detail": "User is already a member of the loyalty program"},
                     status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check if user has an inactive membership that can be reactivated
+            inactive_membership = LoyaltyProgram.objects.filter(user=app_user, is_active=False).first()
+            if inactive_membership:
+                # Reactivate the existing membership with fresh start - reset points and tier
+                inactive_membership.is_active = True
+                inactive_membership.preferences = request.data.get('preferences', {})
+                inactive_membership.points = 0  # Reset points to 0
+                inactive_membership.tier = 'bronze'  # Reset to bronze tier
+                inactive_membership.save()
+                return Response(
+                    LoyaltyProgramSerializer(inactive_membership).data, 
+                    status=status.HTTP_200_OK
                 )
             
             # Create new loyalty program membership
@@ -63,7 +79,8 @@ class LoyaltyProgramViewSet(viewsets.ViewSet):
             # If pk is "me", get the current user's loyalty program
             if pk == "me":
                 try:
-                    membership = LoyaltyProgram.objects.get(user=app_user)
+                    # Only return active memberships
+                    membership = LoyaltyProgram.objects.get(user=app_user, is_active=True)
                     serializer = LoyaltyProgramSerializer(membership)
                     return Response(serializer.data)
                 except LoyaltyProgram.DoesNotExist:
@@ -122,13 +139,75 @@ class LoyaltyProgramViewSet(viewsets.ViewSet):
         """Check if current user is a loyalty program member"""
         try:
             app_user = AppUser.objects.get(user=request.user)
-            is_member = LoyaltyProgram.objects.filter(user=app_user).exists()
+            # Only consider active memberships
+            is_member = LoyaltyProgram.objects.filter(user=app_user, is_active=True).exists()
             
             return Response({
                 "is_member": is_member
             })
         except AppUser.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=False, methods=['post'])
+    def award_points(self, request):
+        """Award points to a user for a purchase"""
+        try:
+            app_user = AppUser.objects.get(user=request.user)
+            
+            # Get or create loyalty program membership
+            membership, created = LoyaltyProgram.objects.get_or_create(
+                user=app_user,
+                defaults={
+                    'points': 0,
+                    'tier': 'bronze',
+                    'is_active': True,
+                    'preferences': {}
+                }
+            )
+            
+            # Get purchase amount from request
+            purchase_amount = Decimal(str(request.data.get('amount', 0)))
+            
+            # Calculate points: 10 points per $1 spent
+            points_to_award = int(purchase_amount * 10)
+            
+            # Award the points
+            old_points = membership.points
+            membership.points += points_to_award
+            
+            # Check for tier advancement
+            old_tier = membership.tier
+            new_tier = self._calculate_tier(membership.points)
+            membership.tier = new_tier
+            
+            membership.save()
+            
+            tier_advanced = old_tier != new_tier
+            
+            return Response({
+                'points_awarded': points_to_award,
+                'total_points': membership.points,
+                'old_tier': old_tier,
+                'new_tier': new_tier,
+                'tier_advanced': tier_advanced,
+                'membership': LoyaltyProgramSerializer(membership).data
+            }, status=status.HTTP_200_OK)
+            
+        except AppUser.DoesNotExist:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def _calculate_tier(self, points):
+        """Calculate tier based on points"""
+        if points >= 1000:
+            return 'platinum'
+        elif points >= 500:
+            return 'gold'
+        elif points >= 200:
+            return 'silver'
+        else:
+            return 'bronze'
     
     @action(detail=True, methods=['post'])
     def deactivate(self, request, pk=None):

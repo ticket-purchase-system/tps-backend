@@ -4,13 +4,14 @@ from app.repositories.voucher_repository import VoucherRepository
 from app.repositories.user_repository import UserRepository
 from datetime import timedelta
 import uuid
+from decimal import Decimal
 
 class VoucherService:
     def __init__(self):
         self.voucher_repository = VoucherRepository()
         self.user_repository = UserRepository()
     
-    def purchase_voucher(self, user_id, amount, currency_code='PLN'):
+    def purchase_voucher(self, user_id, amount, currency_code='USD'):
         """Purchase a new voucher for a user"""
         if amount <= 0:
             raise ValidationError("Voucher amount must be positive")
@@ -116,14 +117,15 @@ class VoucherService:
             voucher.save()
             raise ValidationError("Voucher has expired")
             
-        # Calculate how much of the voucher to use
-        voucher_amount = float(voucher.amount)
+        # Calculate how much of the voucher to use - keep as Decimal for precision
+        voucher_amount = voucher.amount  # This is already a Decimal
+        purchase_amount = Decimal(str(purchase_amount))  # Ensure purchase_amount is Decimal
         amount_to_use = min(voucher_amount, purchase_amount)
         remaining = voucher_amount - amount_to_use
         
         # Update the voucher
         if remaining <= 0:
-            voucher.amount = 0
+            voucher.amount = Decimal('0')
             voucher.status = 'used'
         else:
             voucher.amount = remaining
@@ -132,8 +134,8 @@ class VoucherService:
         
         return {
             'voucher': voucher,
-            'amount_used': amount_to_use,
-            'remaining': remaining
+            'amount_used': float(amount_to_use),  # Convert to float for JSON serialization
+            'remaining': float(remaining)
         }
     
     def get_user_vouchers(self, user_id):

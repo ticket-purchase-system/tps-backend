@@ -17,7 +17,7 @@ class VoucherSerializer(serializers.ModelSerializer):
         
 class VoucherPurchaseSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
-    currency_code = serializers.CharField(max_length=3, default='PLN')
+    currency_code = serializers.CharField(max_length=3, default='USD')
     
 class VoucherRedeemSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=20)

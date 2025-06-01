@@ -86,7 +86,7 @@ class VoucherViewSet(viewsets.ModelViewSet):
             
             user_id = appuser.id
             amount = serializer.validated_data['amount']
-            currency_code = serializer.validated_data.get('currency_code', 'PLN')
+            currency_code = serializer.validated_data.get('currency_code', 'USD')
             
             print(f"Creating voucher: amount={amount}, currency={currency_code}")
             
@@ -192,15 +192,22 @@ class VoucherViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def apply(self, request):
         """Apply a voucher to a purchase"""
+        print(f"Apply voucher request data: {request.data}")
+        
         serializer = VoucherApplySerializer(data=request.data)
         if not serializer.is_valid():
+            print(f"Invalid apply data: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
         try:
+            print(f"Applying voucher ID: {serializer.validated_data['voucher_id']}, Amount: {serializer.validated_data['amount']}")
+            
             result = self.voucher_service.apply_voucher_to_purchase(
                 voucher_id=serializer.validated_data['voucher_id'],
                 purchase_amount=serializer.validated_data['amount']
             )
+            
+            print(f"Voucher application result: {result}")
             
             voucher_serializer = self.get_serializer(result['voucher'])
             return Response({
@@ -210,6 +217,10 @@ class VoucherViewSet(viewsets.ModelViewSet):
                 'voucher': voucher_serializer.data
             })
         except ValidationError as e:
+            print(f"Validation error in apply voucher: {e}")
             return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(f"Unexpected error in apply voucher: {e}")
+            import traceback
+            traceback.print_exc()
             return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
