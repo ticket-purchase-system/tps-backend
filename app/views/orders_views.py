@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+import logging
 
 from app.models import AppUser
 from app.models.orders import Order, Product, Tickets, Review
@@ -31,7 +32,10 @@ class OrderViewSet(viewsets.ViewSet):
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 
+
     def create(self, request):
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Received order payload: {request.data}")
         app_user = get_object_or_404(AppUser, user=request.user)
         data = request.data.copy()
         data['user'] = app_user.id

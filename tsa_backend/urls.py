@@ -63,13 +63,13 @@ urlpatterns = [
          name='download-attachment'),
     path('api/basket', BasketView.as_view()),
     path('api/basket/add', BasketView.as_view()),
-
+    path('api/basket/<int:pk>', BasketView.as_view()),
     # Voucher endpoints
     path('api/vouchers/user', VoucherViewSet.as_view({'get': 'user'})),
     path('api/vouchers/purchase', VoucherViewSet.as_view({'post': 'purchase'})),
     path('api/vouchers/validate/<str:code>', VoucherViewSet.as_view({'get': 'validate'})),
     path('api/vouchers/redeem', VoucherViewSet.as_view({'post': 'redeem'})),
-    path('api/vouchers/<int:pk>/send', VoucherViewSet.as_view({'post': 'send'})),
+    path('api/vouchers/<int:id>/send', VoucherViewSet.as_view({'post': 'send'})),
     path('api/vouchers/apply', VoucherViewSet.as_view({'post': 'apply'})),
 
     # login - get access and refresh tokens
