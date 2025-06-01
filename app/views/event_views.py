@@ -1,6 +1,5 @@
 import os
 import uuid
-from datetime import timezone
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from rest_framework import viewsets
@@ -14,6 +13,7 @@ from app.services.event_service import EventService
 from app.models.event import Event
 from app.models.artist import Artist
 from app.models.user import AppUser
+from django.utils import timezone
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -145,11 +145,9 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Invalid limit parameter'}, status=400)
 
         try:
-            # Use timezone.now() instead of timezone.now().date()
             current_datetime = timezone.now()
             logger.info(f"Current datetime: {current_datetime}")
 
-            # Get past events - compare datetime to datetime
             past_events = Event.objects.filter(date__lt=current_datetime)
             logger.info(f"Found {past_events.count()} past events")
 
@@ -168,7 +166,6 @@ class EventViewSet(viewsets.ModelViewSet):
                 logger.info(f"Processing event: {event.id} - {event.title}")
 
                 try:
-                    # Get all reviews for this event
                     reviews = Review.objects.filter(
                         order__orderproduct__product__event=event
                     ).distinct()
@@ -185,48 +182,66 @@ class EventViewSet(viewsets.ModelViewSet):
                             'rating': review.rating
                         })
 
-                    # Get event photos
                     photos = []
                     try:
-                        # Try to import and use EventPhoto model
                         try:
                             from app.models.event_photo import EventPhoto
                             event_photos = EventPhoto.objects.filter(event=event).order_by('-uploaded_at')
                             for photo in event_photos:
+                                photo_url = photo.url
+                                if photo_url and not photo_url.startswith('http'):
+                                    photo_url = f"http://localhost:8000{photo_url}"
+                                elif photo_url and photo_url.startswith('/'):
+                                    photo_url = f"http://localhost:8000{photo_url}"
+
                                 photos.append({
                                     'id': photo.id,
-                                    'url': photo.url,
+                                    'url': photo_url,
                                     'caption': photo.caption,
                                     'uploaded_at': photo.uploaded_at.isoformat() if photo.uploaded_at else None
                                 })
                             logger.info(f"Found {len(photos)} photos for event {event.id} using EventPhoto model")
 
                         except ImportError:
-                            # Fallback: if photos are stored as a JSON field on the event
                             if hasattr(event, 'photos') and event.photos:
                                 if isinstance(event.photos, str):
                                     import json
-                                    photos = json.loads(event.photos)
+                                    photos_data = json.loads(event.photos)
                                 elif isinstance(event.photos, list):
-                                    photos = event.photos
+                                    photos_data = event.photos
                                 elif hasattr(event.photos, 'all'):
-                                    # If it's a ManyToMany field
+                                    photos_data = []
                                     for photo in event.photos.all():
-                                        photos.append({
+                                        photo_url = photo.url if hasattr(photo,
+                                                                         'url') and photo.url else photo.image.url if hasattr(
+                                            photo, 'image') and photo.image else None
+
+                                        if photo_url and not photo_url.startswith('http'):
+                                            photo_url = f"http://localhost:8000{photo_url}"
+                                        elif photo_url and photo_url.startswith('/'):
+                                            photo_url = f"http://localhost:8000{photo_url}"
+
+                                        photos_data.append({
                                             'id': photo.id,
-                                            'url': photo.url if hasattr(photo,
-                                                                        'url') and photo.url else photo.image.url if hasattr(
-                                                photo, 'image') and photo.image else None,
+                                            'url': photo_url,
                                             'caption': getattr(photo, 'caption', ''),
                                             'uploaded_at': getattr(photo, 'uploaded_at', None)
                                         })
+
+                                for photo_data in photos_data:
+                                    if isinstance(photo_data, dict):
+                                        photo_url = photo_data.get('url', '')
+                                        if photo_url and not photo_url.startswith('http'):
+                                            photo_data['url'] = f"http://localhost:8000{photo_url}"
+                                        elif photo_url and photo_url.startswith('/'):
+                                            photo_data['url'] = f"http://localhost:8000{photo_url}"
+                                        photos.append(photo_data)
+
                             logger.info(f"Found {len(photos)} photos for event {event.id} using JSON field")
 
                     except Exception as photo_error:
                         logger.warning(f"Error loading photos for event {event.id}: {str(photo_error)}")
                         photos = []
-
-                    # Serialize event data
                     event_serializer = EventSerializer(event)
 
                     events_with_reviews.append({
@@ -255,35 +270,51 @@ class EventViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def upload_photo(self, request, pk=None):
         """Upload a single photo for a specific event."""
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
             event = Event.objects.get(id=pk)
+            logger.info(f"Found event: {event.id}")
         except Event.DoesNotExist:
+            logger.error(f"Event with id {pk} not found")
             return Response({'error': 'Event not found'}, status=404)
 
         photo_file = request.FILES.get('photo')
         caption = request.data.get('caption', '')
 
+        logger.info(f"Photo file: {photo_file}")
+        logger.info(f"Caption: {caption}")
+
         if not photo_file:
             return Response({'error': 'No photo provided'}, status=400)
 
         try:
+            # Validate file type
             allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-            if photo_file.content_type not in allowed_types:
+            if hasattr(photo_file, 'content_type') and photo_file.content_type not in allowed_types:
                 return Response({
                     'error': 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'
                 }, status=400)
 
             max_size = 5 * 1024 * 1024  # 5MB
-            if photo_file.size > max_size:
+            if hasattr(photo_file, 'size') and photo_file.size > max_size:
                 return Response({
                     'error': 'File too large. Maximum size is 5MB.'
                 }, status=400)
 
-            file_extension = os.path.splitext(photo_file.name)[1]
+            file_extension = os.path.splitext(photo_file.name)[1] if photo_file.name else '.jpg'
             unique_filename = f"event_{event.id}_{uuid.uuid4().hex}{file_extension}"
-
             file_path = f"event_photos/{unique_filename}"
-            saved_path = default_storage.save(file_path, ContentFile(photo_file.read()))
+
+            logger.info(f"Saving file to: {file_path}")
+
+            try:
+                saved_path = default_storage.save(file_path, ContentFile(photo_file.read()))
+                logger.info(f"File saved successfully to: {saved_path}")
+            except Exception as storage_error:
+                logger.error(f"Storage error: {str(storage_error)}")
+                return Response({'error': f'Failed to save file: {str(storage_error)}'}, status=500)
 
             photo_data = {
                 'url': default_storage.url(saved_path),
@@ -292,24 +323,51 @@ class EventViewSet(viewsets.ModelViewSet):
             }
 
             try:
-                from app.models.event_photo import EventPhoto  # Adjust import path
+                from app.models.event_photo import EventPhoto
+                logger.info("Using EventPhoto model")
+
+                uploaded_by = None
+                if hasattr(request, 'user') and request.user.is_authenticated:
+                    uploaded_by = request.user
+
                 photo = EventPhoto.objects.create(
                     event=event,
                     image=saved_path,
                     caption=caption,
-                    uploaded_by=request.user if hasattr(request, 'user') else None
+                    uploaded_by=uploaded_by
                 )
                 photo_data['id'] = photo.id
-            except ImportError:
-                if not hasattr(event, 'photos') or event.photos is None:
-                    event.photos = []
-                elif isinstance(event.photos, str):
-                    import json
-                    event.photos = json.loads(event.photos) if event.photos else []
+                logger.info(f"EventPhoto created with id: {photo.id}")
 
-                photo_data['id'] = len(event.photos) + 1
-                event.photos.append(photo_data)
-                event.save()
+            except (ImportError, AttributeError) as model_error:
+                logger.info(f"EventPhoto model not available, using JSON field: {str(model_error)}")
+
+                try:
+                    if not hasattr(event, 'photos'):
+                        logger.warning("Event model doesn't have 'photos' field")
+                        return Response({'error': 'Photo storage not properly configured'}, status=500)
+
+                    if event.photos is None:
+                        event.photos = []
+                    elif isinstance(event.photos, str):
+                        import json
+                        try:
+                            event.photos = json.loads(event.photos) if event.photos else []
+                        except json.JSONDecodeError:
+                            event.photos = []
+
+                    photo_data['id'] = len(event.photos) + 1
+                    event.photos.append(photo_data)
+                    event.save()
+                    logger.info("Photo saved to JSON field")
+
+                except Exception as json_error:
+                    logger.error(f"JSON field error: {str(json_error)}")
+                    try:
+                        default_storage.delete(saved_path)
+                    except:
+                        pass
+                    return Response({'error': f'Failed to save photo data: {str(json_error)}'}, status=500)
 
             return Response({
                 'message': 'Photo uploaded successfully',
@@ -317,87 +375,9 @@ class EventViewSet(viewsets.ModelViewSet):
             }, status=201)
 
         except Exception as e:
-            return Response({'error': str(e)}, status=500)
-
-    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
-    def upload_photos(self, request, pk=None):
-        """Upload multiple photos for a specific event."""
-        try:
-            event = Event.objects.get(id=pk)
-        except Event.DoesNotExist:
-            return Response({'error': 'Event not found'}, status=404)
-
-        uploaded_photos = []
-        errors = []
-
-        files = request.FILES.getlist('photos')
-        captions = request.data.getlist('captions', [])
-
-        if not files:
-            return Response({'error': 'No photos provided'}, status=400)
-
-        for i, file in enumerate(files):
-            try:
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                if file.content_type not in allowed_types:
-                    errors.append(f'File {file.name}: Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.')
-                    continue
-
-                max_size = 5 * 1024 * 1024  # 5MB
-                if file.size > max_size:
-                    errors.append(f'File {file.name}: File too large. Maximum size is 5MB.')
-                    continue
-
-                file_extension = os.path.splitext(file.name)[1]
-                unique_filename = f"event_{event.id}_{uuid.uuid4().hex}{file_extension}"
-
-                file_path = f"event_photos/{unique_filename}"
-                saved_path = default_storage.save(file_path, ContentFile(file.read()))
-
-                caption = captions[i] if i < len(captions) else ''
-
-                photo_data = {
-                    'url': default_storage.url(saved_path),
-                    'caption': caption,
-                    'uploaded_at': timezone.now().isoformat()
-                }
-
-                try:
-                    from app.models.event_photo import EventPhoto  # Adjust import path
-                    photo = EventPhoto.objects.create(
-                        event=event,
-                        image=saved_path,
-                        caption=caption,
-                        uploaded_by=request.user if hasattr(request, 'user') else None
-                    )
-                    photo_data['id'] = photo.id
-                except ImportError:
-                    if not hasattr(event, 'photos') or event.photos is None:
-                        event.photos = []
-                    elif isinstance(event.photos, str):
-                        import json
-                        event.photos = json.loads(event.photos) if event.photos else []
-
-                    photo_data['id'] = len(event.photos) + 1
-                    event.photos.append(photo_data)
-                    event.save()
-
-                uploaded_photos.append(photo_data)
-
-            except Exception as e:
-                errors.append(f'File {file.name}: {str(e)}')
-
-        response_data = {
-            'uploaded_photos': uploaded_photos,
-            'success_count': len(uploaded_photos),
-            'total_count': len(files)
-        }
-
-        if errors:
-            response_data['errors'] = errors
-
-        status_code = 201 if uploaded_photos else 400
-        return Response(response_data, status=status_code)
+            logger.error(f"Unexpected error in upload_photo: {str(e)}")
+            logger.exception("Full traceback:")
+            return Response({'error': f'Internal server error: {str(e)}'}, status=500)
 
     @action(detail=True, methods=['delete'])
     def delete_photo(self, request, pk=None):
@@ -422,7 +402,6 @@ class EventViewSet(viewsets.ModelViewSet):
                 photo.delete()
 
             except ImportError:
-                # Option 2: If photos are stored as JSON field
                 if hasattr(event, 'photos') and event.photos:
                     if isinstance(event.photos, str):
                         import json
@@ -434,7 +413,6 @@ class EventViewSet(viewsets.ModelViewSet):
                     for i, photo in enumerate(photos):
                         if photo.get('id') == int(photo_id):
                             photo_to_remove = i
-                            # Delete file from storage
                             if 'url' in photo:
                                 file_path = photo['url'].replace(default_storage.base_url, '')
                                 default_storage.delete(file_path)
