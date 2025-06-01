@@ -103,6 +103,8 @@ urlpatterns = [
     path('api/orders/<int:pk>/add_review/', OrderViewSet.as_view({'post': 'add_review'})),
     path('api/orders/<int:pk>/update_review/', OrderViewSet.as_view({'put': 'update_review'})),
     path('api/orders/<int:pk>/delete_review/', OrderViewSet.as_view({'delete': 'delete_review'})),
+    path('api/orders/<int:pk>/add-product/', OrderViewSet.as_view({'post': 'add_product'})),
+
 
     path(
         'api/orders/<int:pk>/has-issue/',
