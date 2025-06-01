@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from app.views.artist_views import ArtistViewSet
-from app.views.orders_views import OrderViewSet, ProductViewSet, TicketsViewSet, ReviewViewSet
+from app.views.orders_views import OrderViewSet, ProductViewSet, TicketsViewSet, ReviewViewSet, OrderIssueViewSet, \
+    OrderRefundViewSet
 from app.views.event_attachment_views import EventAttachmentViewSet
 from app.views.event_details_views import EventDetailsViewSet
 from app.views.user_event_favorite import UserEventFavoriteViewSet
@@ -88,6 +89,30 @@ urlpatterns = [
     path('api/orders/<int:pk>/add_review/', OrderViewSet.as_view({'post': 'add_review'})),
     path('api/orders/<int:pk>/update_review/', OrderViewSet.as_view({'put': 'update_review'})),
     path('api/orders/<int:pk>/delete_review/', OrderViewSet.as_view({'delete': 'delete_review'})),
+
+    path(
+        'api/orders/<int:pk>/has-issue/',
+        OrderIssueViewSet.as_view({'get': 'has_issue'}),
+        name='order-has-issue'
+    ),
+    path(
+        'api/orders/<int:pk>/report-issue/',
+        OrderIssueViewSet.as_view({'post': 'report_issue'}),
+        name='order-report-issue'
+    ),
+    path(
+        'api/orders/<int:pk>/has-refund/',
+        OrderRefundViewSet.as_view({'get': 'has_refund'}),
+        name='order-has-refund'
+    ),
+    path(
+        'api/orders/<int:pk>/refund/',
+        OrderRefundViewSet.as_view({'post': 'create_refund'}),
+        name='order-refund'
+    ),
+
+    path('api/orders/<int:pk>/download-pdf/', OrderViewSet.as_view({'get': 'download_pdf'})),
+
 
 ]
 
