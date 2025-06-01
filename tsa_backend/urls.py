@@ -61,6 +61,7 @@ urlpatterns = [
     path('api/technical-issues/<pk>', TechnicalIssueViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
     # Loyalty program endpoints - Make sure "check" endpoint is registered before the detail view
     path('api/loyalty-program/check', LoyaltyProgramViewSet.as_view({'get': 'check_membership'})),
+    path('api/loyalty-program/award_points', LoyaltyProgramViewSet.as_view({'post': 'award_points'})),
     path('api/loyalty-program', LoyaltyProgramViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('api/loyalty-program/<pk>', LoyaltyProgramViewSet.as_view({'get': 'retrieve', 'put': 'update'})),
     path('api/loyalty-program/<pk>/deactivate', LoyaltyProgramViewSet.as_view({'post': 'deactivate'})),
