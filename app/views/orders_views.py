@@ -34,13 +34,12 @@ class OrderViewSet(viewsets.ViewSet):
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 
-
     def create(self, request):
         logger = logging.getLogger(__name__)
         logger.debug(f"Received order payload: {request.data}")
         app_user = get_object_or_404(AppUser, user=request.user)
         data = request.data.copy()
-        data['user'] = app_user.id
+        data['user'] = request.user.id
         serializer = OrderSerializer(data=data)
         if serializer.is_valid():
             order = serializer.save()

@@ -3,7 +3,6 @@ from app.models.ticket import Ticket
 from app.models.event import Event
 
 class TicketSerializer(serializers.ModelSerializer):
-    user = serializers.IntegerField(source='user.id')
     class Meta:
         model = Ticket
         fields = '__all__'
