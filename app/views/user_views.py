@@ -7,6 +7,7 @@ from app.models import AppUser
 from app.serializers.user_serializer import UserSerializer, AppUserSerializer
 from app.services.user_service import UserService
 from rest_framework.permissions import AllowAny
+from rest_framework.decorators import action
 
 class UserViewSet(viewsets.ViewSet):
     """
@@ -64,3 +65,31 @@ class UserViewSet(viewsets.ViewSet):
             return Response({"detail": "User permanently deleted"}, status=status.HTTP_204_NO_CONTENT)
         except AppUser.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['post'], url_path='reset-password', url_name='reset_password')
+    def reset_password(self, request):
+        """Reset user password"""
+        username = request.data.get('username')
+        new_password = request.data.get('new_password')
+
+        if not username or not new_password:
+            return Response(
+                {"detail": "Username and new password are required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(username=username)
+            user.set_password(new_password)
+            user.save()
+            return Response({"detail": "Password reset successfully"})
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"detail": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

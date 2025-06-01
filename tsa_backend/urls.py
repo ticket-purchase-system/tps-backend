@@ -32,7 +32,8 @@ from app.views.statistics_views import (
 
 router = DefaultRouter()
 
-router.register(r'users', UserViewSet, basename='users')
+# Remove the users registration from router since we're handling it manually
+# router.register(r'users', UserViewSet, basename='users')
 router.register(r'events', EventViewSet, basename='events')
 router.register(r'events/favorites', UserEventFavoriteViewSet, basename='events/favorites')
 router.register(r'technical-issues', TechnicalIssueViewSet, basename='technical-issues')
@@ -44,7 +45,6 @@ router.register(r'tickets', TicketsViewSet, basename='tickets')
 router.register(r'reviews', ReviewViewSet, basename='reviews')
 router.register(r'attachments', EventAttachmentViewSet, basename='attachments')
 router.register(r'vouchers', VoucherViewSet, basename='vouchers')
-router.register(r'reviews', ReviewViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -55,8 +55,24 @@ urlpatterns = [
     path('api/events/statistics/toggle-data-source/', toggle_data_source, name='toggle-data-source'),
     path('api/events/statistics/data-source-status/', data_source_status, name='data-source-status'),
     path('api/', include(router.urls)),
-    path('api/users', UserViewSet.as_view({'get': 'list', 'post': 'create'})),
-    path('api/users/<pk>', UserViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
+
+    # User endpoints
+    path('api/users/', UserViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    })),
+    path('api/users/reset-password/', UserViewSet.as_view({
+        'post': 'reset_password'
+    })),
+    path('api/users/<str:pk>/', UserViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'delete': 'destroy'
+    })),
+
     path('api/technical-issues', TechnicalIssueViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('api/technical-issues/<pk>', TechnicalIssueViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
     # Loyalty program endpoints - Make sure "check" endpoint is registered before the detail view
@@ -86,13 +102,6 @@ urlpatterns = [
     path('api/vouchers/redeem', VoucherViewSet.as_view({'post': 'redeem'})),
     path('api/vouchers/<int:id>/send', VoucherViewSet.as_view({'post': 'send'})),
     path('api/vouchers/apply', VoucherViewSet.as_view({'post': 'apply'})),
-
-    # login - get access and refresh tokens
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    # refresh - get new access token
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # logout - when refresh token expires
-    path('api/token/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
 
     path('api/orders', OrderViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('api/orders/<pk>', OrderViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
