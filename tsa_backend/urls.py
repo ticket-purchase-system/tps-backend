@@ -21,6 +21,14 @@ from rest_framework_simplejwt.views import (
 from app.views.mail_views import send_ticket_email
 from django.conf import settings
 from django.conf.urls.static import static
+from app.views.statistics_views import (
+    event_statistics,
+    top_selling_events,
+    monthly_trends,
+    event_type_distribution,
+    toggle_data_source,
+    data_source_status
+)
 
 router = DefaultRouter()
 
@@ -40,6 +48,12 @@ router.register(r'reviews', ReviewViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/events/statistics/', event_statistics, name='event-statistics'),
+    path('api/events/statistics/top-selling/', top_selling_events, name='top-selling-events'),
+    path('api/events/statistics/monthly-trends/', monthly_trends, name='monthly-trends'),
+    path('api/events/statistics/type-distribution/', event_type_distribution, name='event-type-distribution'),
+    path('api/events/statistics/toggle-data-source/', toggle_data_source, name='toggle-data-source'),
+    path('api/events/statistics/data-source-status/', data_source_status, name='data-source-status'),
     path('api/', include(router.urls)),
     path('api/users', UserViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('api/users/<pk>', UserViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})),
