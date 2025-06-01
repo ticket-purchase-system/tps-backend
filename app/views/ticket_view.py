@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from app.serializers.ticket_serializer import TicketSerializer
 from app.services.ticket_service import TicketService
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from app.models import Ticket
+import traceback
 
 class BasketView(APIView):
     permission_classes = [IsAuthenticated]
@@ -22,8 +26,13 @@ class BasketView(APIView):
         serializer = TicketSerializer(data=request.data)
         if serializer.is_valid():
             print("SERIALIZER OK, dodajemy do koszyka")
-            ticket = TicketService.add_to_basket(request.user, serializer.validated_data)
+            ticket = serializer.save(user=request.user)
             return Response(TicketSerializer(ticket).data)
 
-        print("❌ SERIALIZER ERRORS:", serializer.errors)
+        print("SERIALIZER ERRORS:", serializer.errors)
         return Response(serializer.errors, status=400)
+
+    def delete(self, request, pk):
+        ticket = get_object_or_404(Ticket, id=pk, user=request.user)
+        ticket.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

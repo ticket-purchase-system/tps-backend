@@ -1,18 +1,18 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from app.models.orders import Product, Tickets, Review, OrderProduct, Order
+from app.models.orders import Product, Review, OrderProduct, Order, IssueReport, RefundRequest
 
 User = get_user_model()
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'price', 'description']
+        fields = ['id', 'price', 'description', 'event']
 
-class TicketsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Tickets
-        fields = ['id', 'price', 'description', 'sector', 'seat']
+# class TicketsSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Tickets
+#         fields = ['id', 'price', 'description', 'sector', 'seat']
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,3 +54,20 @@ class OrderSerializer(serializers.ModelSerializer):
                 continue
 
         return order
+
+
+class IssueReportSerializer(serializers.ModelSerializer):
+    order = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = IssueReport
+        fields = ['id', 'order', 'opis', 'zalacznik', 'status', 'data']
+        read_only_fields = ['id', 'order', 'status', 'data']
+
+class RefundRequestSerializer(serializers.ModelSerializer):
+    order = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = RefundRequest
+        fields = ['id', 'order', 'reason', 'status', 'date']
+        read_only_fields = ['id', 'order', 'status', 'date']
