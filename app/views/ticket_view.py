@@ -26,10 +26,10 @@ class BasketView(APIView):
         serializer = TicketSerializer(data=request.data)
         if serializer.is_valid():
             print("SERIALIZER OK, dodajemy do koszyka")
-            ticket = TicketService.add_to_basket(request.user, serializer.validated_data)
+            ticket = serializer.save(user=request.user)
             return Response(TicketSerializer(ticket).data)
 
-        print("❌ SERIALIZER ERRORS:", serializer.errors)
+        print("SERIALIZER ERRORS:", serializer.errors)
         return Response(serializer.errors, status=400)
 
     def delete(self, request, pk):
